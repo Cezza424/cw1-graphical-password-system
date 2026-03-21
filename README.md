@@ -45,6 +45,15 @@ Open `http://localhost:3000`.
 - `GET /api/users` returns `{ users: Array<{ id, username, avatarUrl }>, source }`
 - `GET /api/password?userId=<id>` returns `{ userId, emojiIds: string[3], source }`
 - `POST /api/password` accepts `{ userId, emojiIds: string[3] }`
+- `POST /api/password/verify` accepts `{ userId, emojiIds: string[3] }` and returns `{ isMatch, source }`
+
+`POST /api/password/verify` has basic per-user rate limiting (`429` with `retryAfterSeconds`) to reduce brute-force attempts.
+In production, verify does not fall back to default password on DB failure and returns `503`.
+
+## Admin
+
+- Open `/admin` to manage emoji passwords for existing users.
+- Actions available: reset to default password and random password rotation.
 
 Example update request:
 
@@ -63,3 +72,14 @@ npm run smoke:test
 ```
 
 The smoke test checks API availability and confirms any-order matching logic.
+
+## Verify Route Test
+
+With the dev server running:
+
+```bash
+npm run test:verify
+```
+
+This validates `/api/password/verify` success, mismatch, and `429` rate-limit behavior.
+

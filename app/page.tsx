@@ -3,16 +3,13 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
-  DEFAULT_PASSWORD_IDS,
   EMOJI_TILES,
-  isPasswordMatchAnyOrder,
-  isValidPasswordIds,
   shuffleTiles,
   type EmojiId,
 } from "@/lib/emoji-password";
 
 type LoadState = "loading" | "ready" | "error";
-type AuthState = "idle" | "checking" | "success" | "failure";
+type AuthState = "idle" | "checking" | "success" | "failure" | "rate-limited";
 
 type UserProfile = {
   id: string;
@@ -26,10 +23,10 @@ type UsersApiResponse = {
   error?: string;
 };
 
-type PasswordApiResponse = {
-  userId?: string;
-  emojiIds?: string[];
+type VerifyApiResponse = {
+  isMatch?: boolean;
   source?: "database" | "fallback";
+  retryAfterSeconds?: number;
   error?: string;
 };
 
@@ -41,12 +38,11 @@ export default function Home() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [carouselPage, setCarouselPage] = useState(0);
 
-  const [loadState, setLoadState] = useState<LoadState>("loading");
   const [authState, setAuthState] = useState<AuthState>("idle");
-  const [passwordIds, setPasswordIds] = useState<EmojiId[]>(DEFAULT_PASSWORD_IDS);
-  const [passwordSource, setPasswordSource] = useState<"database" | "fallback">(
-    "fallback",
+  const [passwordSource, setPasswordSource] = useState<"database" | "fallback" | "unknown">(
+    "unknown",
   );
+  const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | null>(null);
   const [gridTiles, setGridTiles] = useState(() => shuffleTiles(EMOJI_TILES));
   const [selectedIds, setSelectedIds] = useState<EmojiId[]>([]);
 
@@ -67,6 +63,7 @@ export default function Home() {
   const resetAttempt = () => {
     setSelectedIds([]);
     setAuthState("idle");
+    setRetryAfterSeconds(null);
     setGridTiles(shuffleTiles(EMOJI_TILES));
   };
 
@@ -99,74 +96,96 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!selectedUserId) {
-      setLoadState("loading");
-      return;
-    }
-
-    const loadPassword = async () => {
-      setLoadState("loading");
-
-      try {
-        const response = await fetch(`/api/password?userId=${encodeURIComponent(selectedUserId)}`, {
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          throw new Error("Could not load password settings");
-        }
-
-        const data = (await response.json()) as PasswordApiResponse;
-        if (data.error) {
-          console.warn("API Warning:", data.error);
-        }
-
-        if (isValidPasswordIds(data.emojiIds)) {
-          setPasswordIds(data.emojiIds);
-        }
-
-        setPasswordSource(data.source === "database" ? "database" : "fallback");
-
-        setLoadState("ready");
-      } catch (error) {
-        console.error("Failed to load password:", error);
-        setLoadState("error");
-      }
-    };
-
-    loadPassword();
-  }, [selectedUserId]);
-
-  useEffect(() => {
     if (carouselPage >= totalPages) {
       setCarouselPage(totalPages - 1);
     }
   }, [carouselPage, totalPages]);
 
   useEffect(() => {
-    if (selectedCount !== 3 || loadState !== "ready" || !selectedUserId) {
+    if (selectedCount !== 3 || !selectedUserId) {
       return;
     }
 
-    setAuthState("checking");
-    const isMatch = isPasswordMatchAnyOrder(selectedIds, passwordIds);
+    let resetTimer: number | undefined;
+    let isCancelled = false;
 
-    if (isMatch) {
-      setAuthState("success");
-      return;
-    }
+    const verifySelection = async () => {
+      setAuthState("checking");
+      setRetryAfterSeconds(null);
 
-    setAuthState("failure");
-    const timer = window.setTimeout(() => {
-      resetAttempt();
-    }, 1200);
+      try {
+        const response = await fetch("/api/password/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: selectedUserId,
+            emojiIds: selectedIds,
+          }),
+        });
+
+        const data = (await response.json()) as VerifyApiResponse;
+        const nextSource =
+          data.source === "database" || data.source === "fallback" ? data.source : "unknown";
+        setPasswordSource(nextSource);
+
+        if (response.status === 429) {
+          setAuthState("rate-limited");
+          setRetryAfterSeconds(data.retryAfterSeconds ?? null);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Could not verify emoji selection");
+        }
+
+        if (isCancelled) {
+          return;
+        }
+
+        if (data.isMatch) {
+          setAuthState("success");
+          return;
+        }
+
+        setAuthState("failure");
+        resetTimer = window.setTimeout(() => {
+          resetAttempt();
+        }, 1200);
+      } catch (error) {
+        console.error("Failed to verify password:", error);
+        if (isCancelled) {
+          return;
+        }
+
+        setPasswordSource("unknown");
+        setAuthState("failure");
+        resetTimer = window.setTimeout(() => {
+          resetAttempt();
+        }, 1200);
+      }
+    };
+
+    verifySelection();
 
     return () => {
-      window.clearTimeout(timer);
+      isCancelled = true;
+      if (typeof resetTimer === "number") {
+        window.clearTimeout(resetTimer);
+      }
     };
-  }, [selectedCount, selectedIds, passwordIds, loadState, selectedUserId]);
+  }, [selectedCount, selectedIds, selectedUserId]);
 
   const onTileClick = (emojiId: EmojiId) => {
-    if (!selectedUserId || loadState !== "ready" || authState === "success" || selectedCount >= 3) {
+    if (
+      !selectedUserId ||
+      usersLoadState !== "ready" ||
+      authState === "success" ||
+      authState === "checking" ||
+      authState === "rate-limited" ||
+      selectedCount >= 3
+    ) {
       return;
     }
 
@@ -183,6 +202,7 @@ export default function Home() {
     }
 
     setSelectedUserId(userId);
+    setPasswordSource("unknown");
     resetAttempt();
   };
 
@@ -193,12 +213,10 @@ export default function Home() {
         ? "Could not load profiles. Refresh to try again."
         : !selectedUserId
           ? "Select a profile to continue."
-          : loadState === "loading"
-      ? "Loading password settings..."
-      : loadState === "error"
-        ? "Could not load backend settings. Refresh to try again."
-        : authState === "success"
+          : authState === "success"
           ? "Great job! You are authorised."
+          : authState === "rate-limited"
+            ? `Too many attempts. ${retryAfterSeconds ? `Try again in ${retryAfterSeconds}s.` : "Please wait and try again."}`
           : authState === "failure"
             ? "Not quite right. Shuffling for another try..."
             : authState === "checking"
@@ -271,13 +289,19 @@ export default function Home() {
         {selectedUser ? (
           <>
             <p className="mt-4 text-center text-xs text-zinc-500 dark:text-zinc-500">
-              Signed profile: {selectedUser.username} • Selection: {selectedCount}/3 • Source: {passwordSource}
+              Signed profile: {selectedUser.username} • Selection: {selectedCount}/3
+              {passwordSource !== "unknown" ? ` • Source: ${passwordSource}` : ""}
             </p>
 
             <div className="mt-6 grid grid-cols-3 gap-3">
               {gridTiles.map((tile) => {
                 const isHidden = selectedSet.has(tile.id);
-                const isDisabled = loadState !== "ready" || isHidden || authState === "success";
+                const isDisabled =
+                  usersLoadState !== "ready" ||
+                  isHidden ||
+                  authState === "success" ||
+                  authState === "checking" ||
+                  authState === "rate-limited";
 
                 return (
                   <button
@@ -298,7 +322,7 @@ export default function Home() {
             <button
               type="button"
               onClick={resetAttempt}
-              disabled={loadState !== "ready" || authState === "checking"}
+              disabled={usersLoadState !== "ready" || authState === "checking"}
               className="mt-6 w-full rounded-full bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
             >
               Start a New Attempt

@@ -15,6 +15,10 @@ type PasswordResponse = {
   error?: string;
 };
 
+type PasswordErrorResponse = {
+  error: string;
+};
+
 function fallbackPasswordResponse(userId: string, error?: string): NextResponse<PasswordResponse> {
   return NextResponse.json({
     userId,
@@ -24,7 +28,9 @@ function fallbackPasswordResponse(userId: string, error?: string): NextResponse<
   });
 }
 
-export async function GET(request: Request): Promise<NextResponse<PasswordResponse>> {
+export async function GET(
+  request: Request,
+): Promise<NextResponse<PasswordResponse | PasswordErrorResponse>> {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
 

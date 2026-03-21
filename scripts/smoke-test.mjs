@@ -1,20 +1,5 @@
 const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
 
-function isMatchAnyOrder(selectedIds, passwordIds) {
-  if (!Array.isArray(selectedIds) || !Array.isArray(passwordIds)) {
-    return false;
-  }
-
-  if (selectedIds.length !== passwordIds.length) {
-    return false;
-  }
-
-  const selectedSorted = [...selectedIds].sort();
-  const passwordSorted = [...passwordIds].sort();
-
-  return selectedSorted.every((id, index) => id === passwordSorted[index]);
-}
-
 async function run() {
   const usersResponse = await fetch(`${baseUrl}/api/users`, {
     headers: { Accept: "application/json" },
@@ -51,8 +36,26 @@ async function run() {
   }
 
   const reversedSelection = [...data.emojiIds].reverse();
-  if (!isMatchAnyOrder(reversedSelection, data.emojiIds)) {
-    throw new Error("Any-order match check failed");
+
+  const verifyResponse = await fetch(`${baseUrl}/api/password/verify`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      userId: selectedUser.id,
+      emojiIds: reversedSelection,
+    }),
+  });
+
+  if (!verifyResponse.ok) {
+    throw new Error(`POST /api/password/verify failed with ${verifyResponse.status}`);
+  }
+
+  const verifyData = await verifyResponse.json();
+  if (verifyData.isMatch !== true) {
+    throw new Error("Server-side any-order verification failed");
   }
 
   // Warn if using fallback instead of database
@@ -64,7 +67,7 @@ async function run() {
 
   console.log("✅ Smoke test passed:");
   console.log(`   - Selected user: ${selectedUser.username ?? selectedUser.id}`);
-  console.log(`   - Source: ${data.source ?? "unknown"}`);
+  console.log(`   - Source: ${verifyData.source ?? data.source ?? "unknown"}`);
   console.log(`   - Password IDs: ${data.emojiIds.join(", ")}`);
 }
 
