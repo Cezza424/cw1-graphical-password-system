@@ -1,0 +1,28 @@
+[
+  { "username": "alex", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=alex", "emojiIds": ["dog", "star", "car"] },
+  { "username": "bella", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=bella", "emojiIds": ["cat", "rocket", "apple"] },
+  { "username": "charlie", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=charlie", "emojiIds": ["sun", "book", "ball"] },
+  { "username": "diana", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=diana", "emojiIds": ["dog", "rocket", "sun"] },
+  { "username": "ethan", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=ethan", "emojiIds": ["cat", "star", "book"] },
+  { "username": "freya", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=freya", "emojiIds": ["apple", "car", "ball"] },
+  { "username": "george", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=george", "emojiIds": ["dog", "apple", "book"] },
+  { "username": "hana", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=hana", "emojiIds": ["cat", "car", "sun"] },
+  { "username": "isaac", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=isaac", "emojiIds": ["rocket", "star", "ball"] },
+  { "username": "jasmine", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=jasmine", "emojiIds": ["dog", "cat", "star"] },
+  { "username": "kai", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=kai", "emojiIds": ["car", "book", "sun"] },
+  { "username": "lily", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=lily", "emojiIds": ["apple", "rocket", "dog"] },
+  { "username": "mason", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=mason", "emojiIds": ["sun", "star", "cat"] },
+  { "username": "nora", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=nora", "emojiIds": ["ball", "book", "rocket"] },
+  { "username": "oscar", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=oscar", "emojiIds": ["car", "apple", "dog"] },
+  { "username": "priya", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=priya", "emojiIds": ["star", "sun", "book"] },
+  { "username": "quinn", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=quinn", "emojiIds": ["cat", "ball", "car"] },
+  { "username": "ruby", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=ruby", "emojiIds": ["rocket", "dog", "apple"] },
+  { "username": "sam", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=sam", "emojiIds": ["book", "sun", "cat"] },
+  { "username": "tessa", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=tessa", "emojiIds": ["star", "car", "ball"] },
+  { "username": "uma", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=uma", "emojiIds": ["apple", "sun", "rocket"] },
+  { "username": "victor", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=victor", "emojiIds": ["dog", "book", "cat"] },
+  { "username": "willow", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=willow", "emojiIds": ["car", "star", "apple"] },
+  { "username": "xavier", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=xavier", "emojiIds": ["ball", "rocket", "sun"] },
+  { "username": "zoe", "avatarUrl": "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=zoe", "emojiIds": ["cat", "dog", "book"] }
+]
+

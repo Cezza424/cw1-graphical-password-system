@@ -5,53 +5,80 @@ import {
   isValidPasswordIds,
   type EmojiId,
 } from "@/lib/emoji-password";
-import GraphicalPassword from "@/lib/models/GraphicalPassword";
+import User from "@/lib/models/User";
+import { ensureSeedUsers, isObjectId } from "@/lib/users";
 
 type PasswordResponse = {
+  userId: string;
   emojiIds: EmojiId[];
   source: "database" | "fallback";
   error?: string;
 };
 
-function fallbackPasswordResponse(error?: string): NextResponse<PasswordResponse> {
+function fallbackPasswordResponse(userId: string, error?: string): NextResponse<PasswordResponse> {
   return NextResponse.json({
+    userId,
     emojiIds: DEFAULT_PASSWORD_IDS,
     source: "fallback",
     error,
   });
 }
 
-export async function GET(): Promise<NextResponse<PasswordResponse>> {
+export async function GET(request: Request): Promise<NextResponse<PasswordResponse>> {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get("userId");
+
+  if (!userId || !isObjectId(userId)) {
+    return NextResponse.json(
+      { error: "userId query parameter is required" },
+      { status: 400 },
+    );
+  }
+
   try {
     await connectToDatabase();
+    await ensureSeedUsers();
 
-    const existing = await GraphicalPassword.findOne({ key: "default" }).lean();
-    if (!existing || !isValidPasswordIds(existing.emojiIds)) {
-      const seeded = await GraphicalPassword.findOneAndUpdate(
-        { key: "default" },
-        { key: "default", emojiIds: DEFAULT_PASSWORD_IDS },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
+    const user = await User.findById(userId).lean();
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (!isValidPasswordIds(user.emojiIds)) {
+      const seeded = await User.findByIdAndUpdate(
+        userId,
+        { emojiIds: DEFAULT_PASSWORD_IDS },
+        { new: true },
       ).lean();
 
       if (!seeded || !isValidPasswordIds(seeded.emojiIds)) {
-        return fallbackPasswordResponse("Invalid password data in database");
+        return fallbackPasswordResponse(userId, "Invalid password data in database");
       }
 
-      return NextResponse.json({ emojiIds: seeded.emojiIds, source: "database" });
+      return NextResponse.json({
+        userId,
+        emojiIds: seeded.emojiIds,
+        source: "database",
+      });
     }
 
-    return NextResponse.json({ emojiIds: existing.emojiIds, source: "database" });
+    return NextResponse.json({ userId, emojiIds: user.emojiIds, source: "database" });
   } catch {
-    return fallbackPasswordResponse("Database unavailable, using fallback password");
+    return fallbackPasswordResponse(userId, "Database unavailable, using fallback password");
   }
 }
 
 type SetPasswordRequest = {
+  userId?: string;
   emojiIds?: unknown;
 };
 
 export async function POST(request: Request): Promise<NextResponse> {
   const payload = (await request.json()) as SetPasswordRequest;
+
+  if (!payload.userId || !isObjectId(payload.userId)) {
+    return NextResponse.json({ error: "userId is required" }, { status: 400 });
+  }
 
   if (!isValidPasswordIds(payload.emojiIds)) {
     return NextResponse.json(
@@ -62,14 +89,23 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     await connectToDatabase();
+    await ensureSeedUsers();
 
-    await GraphicalPassword.findOneAndUpdate(
-      { key: "default" },
-      { key: "default", emojiIds: payload.emojiIds },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+    const updated = await User.findByIdAndUpdate(
+      payload.userId,
+      { emojiIds: payload.emojiIds },
+      { new: true },
     );
 
-    return NextResponse.json({ emojiIds: payload.emojiIds, source: "database" });
+    if (!updated) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      userId: payload.userId,
+      emojiIds: payload.emojiIds,
+      source: "database",
+    });
   } catch {
     return NextResponse.json(
       { error: "Database unavailable, could not save password" },
