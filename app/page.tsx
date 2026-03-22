@@ -2,6 +2,10 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Pill } from "@/components/ui/pill";
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { TopAppBar } from "@/components/ui/top-app-bar";
 import {
   EMOJI_TILES,
   shuffleTiles,
@@ -30,8 +34,6 @@ type VerifyApiResponse = {
   error?: string;
 };
 
-const CAROUSEL_PAGE_SIZE = 5;
-
 export default function Home() {
   const [usersLoadState, setUsersLoadState] = useState<LoadState>("loading");
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -48,12 +50,8 @@ export default function Home() {
 
   const selectedCount = selectedIds.length;
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const totalPages = Math.max(1, Math.ceil(users.length / CAROUSEL_PAGE_SIZE));
-
-  const visibleUsers = useMemo(() => {
-    const start = carouselPage * CAROUSEL_PAGE_SIZE;
-    return users.slice(start, start + CAROUSEL_PAGE_SIZE);
-  }, [users, carouselPage]);
+  const totalProfiles = users.length;
+  const previewUser = users[carouselPage] ?? null;
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -96,10 +94,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (carouselPage >= totalPages) {
-      setCarouselPage(totalPages - 1);
+    if (totalProfiles === 0) {
+      return;
     }
-  }, [carouselPage, totalPages]);
+
+    if (carouselPage >= totalProfiles) {
+      setCarouselPage(totalProfiles - 1);
+    }
+  }, [carouselPage, totalProfiles]);
 
   useEffect(() => {
     if (selectedCount !== 3 || !selectedUserId) {
@@ -206,13 +208,19 @@ export default function Home() {
     resetAttempt();
   };
 
+  const onChangeProfile = () => {
+    setSelectedUserId(null);
+    setPasswordSource("unknown");
+    resetAttempt();
+  };
+
   const statusText =
     usersLoadState === "loading"
       ? "Loading profiles..."
       : usersLoadState === "error"
         ? "Could not load profiles. Refresh to try again."
         : !selectedUserId
-          ? "Select a profile to continue."
+          ? "Choose your profile first."
           : authState === "success"
           ? "Great job! You are authorised."
           : authState === "rate-limited"
@@ -224,112 +232,135 @@ export default function Home() {
               : "Tap 3 emojis to log in.";
 
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-zinc-50 px-4 py-10 dark:bg-black">
-      <section className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-zinc-200 dark:bg-zinc-950 dark:ring-zinc-800">
-        <h1 className="text-center text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Emoji Login
-        </h1>
-        <p className="mt-3 text-center text-sm text-zinc-600 dark:text-zinc-400">{statusText}</p>
+    <main className="min-h-screen bg-(--color-background)">
+      <TopAppBar active="login" />
 
-        <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setCarouselPage((current) => Math.max(0, current - 1))}
-              disabled={carouselPage === 0 || usersLoadState !== "ready"}
-              className="rounded-full border border-zinc-300 px-3 py-1 text-sm text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:text-zinc-200"
-            >
-              Prev
-            </button>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Page {carouselPage + 1}/{totalPages}
-            </p>
-            <button
-              type="button"
-              onClick={() => setCarouselPage((current) => Math.min(totalPages - 1, current + 1))}
-              disabled={carouselPage >= totalPages - 1 || usersLoadState !== "ready"}
-              className="rounded-full border border-zinc-300 px-3 py-1 text-sm text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:text-zinc-200"
-            >
-              Next
-            </button>
-          </div>
+      <div className="relative overflow-hidden px-3 py-6 sm:px-4 sm:py-8 md:px-8 md:py-12">
+        <div className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-amber-300/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-emerald-300/20 blur-3xl" />
 
-          <div className="mt-4 grid grid-cols-5 gap-3">
-            {visibleUsers.map((user) => {
-              const isSelected = user.id === selectedUserId;
+        <Card className="relative mx-auto w-full max-w-5xl rounded-4xl shadow-[0_16px_40px_rgba(0,0,0,0.08)] backdrop-blur-sm" padding="lg">
+          <header className="text-center">
+            <Pill>Child-friendly sign in</Pill>
+            <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl md:text-5xl dark:text-zinc-100">
+              Emoji Login
+            </h1>
+            <p className="mt-2 text-sm text-zinc-600 md:text-base dark:text-zinc-300">{statusText}</p>
+          </header>
 
-              return (
-                <button
-                  key={user.id}
-                  type="button"
-                  onClick={() => onUserSelect(user.id)}
-                  className={`rounded-xl border p-2 text-center transition-colors ${
-                    isSelected
-                      ? "border-zinc-900 bg-zinc-200 dark:border-zinc-100 dark:bg-zinc-800"
-                      : "border-zinc-300 bg-white hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-800"
-                  }`}
-                >
-                  <Image
-                    src={user.avatarUrl}
-                    alt={`${user.username} avatar`}
-                    width={48}
-                    height={48}
-                    unoptimized
-                    className="mx-auto h-12 w-12 rounded-full border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950"
-                  />
-                  <p className="mt-2 truncate text-xs font-medium text-zinc-700 dark:text-zinc-200">
-                    {user.username}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+          <div className="mt-6 sm:mt-8">
+            {!selectedUser ? (
+              <Card as="section" tone="muted" className="mx-auto w-full max-w-lg" padding="md">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-base font-semibold text-zinc-900 sm:text-lg dark:text-zinc-100">Pick your profile</h2>
+                  <Pill>{totalProfiles} users</Pill>
+                </div>
 
-        {selectedUser ? (
-          <>
-            <p className="mt-4 text-center text-xs text-zinc-500 dark:text-zinc-500">
-              Signed profile: {selectedUser.username} • Selection: {selectedCount}/3
-              {passwordSource !== "unknown" ? ` • Source: ${passwordSource}` : ""}
-            </p>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              {gridTiles.map((tile) => {
-                const isHidden = selectedSet.has(tile.id);
-                const isDisabled =
-                  usersLoadState !== "ready" ||
-                  isHidden ||
-                  authState === "success" ||
-                  authState === "checking" ||
-                  authState === "rate-limited";
-
-                return (
+                <div className="mt-4 flex items-center justify-between gap-2">
                   <button
-                    key={tile.id}
                     type="button"
-                    onClick={() => onTileClick(tile.id)}
-                    disabled={isDisabled}
-                    className={`aspect-square rounded-2xl border border-zinc-200 bg-zinc-100 text-4xl shadow-sm transition-transform dark:border-zinc-700 dark:bg-zinc-900 ${
-                      isHidden ? "invisible" : "hover:scale-[1.02] active:scale-95"
-                    }`}
+                    onClick={() => setCarouselPage((current) => Math.max(0, current - 1))}
+                    disabled={carouselPage === 0 || usersLoadState !== "ready"}
+                    className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-200 sm:px-4 sm:text-sm"
                   >
-                    <span aria-hidden="true">{tile.emoji}</span>
+                    Prev
                   </button>
-                );
-              })}
-            </div>
+                  <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 sm:text-xs">
+                    Profile {totalProfiles === 0 ? 0 : carouselPage + 1}/{totalProfiles}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCarouselPage((current) => Math.min(totalProfiles - 1, current + 1))}
+                    disabled={carouselPage >= totalProfiles - 1 || usersLoadState !== "ready"}
+                    className="rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-transform hover:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-200 sm:px-4 sm:text-sm"
+                  >
+                    Next
+                  </button>
+                </div>
 
-            <button
-              type="button"
-              onClick={resetAttempt}
-              disabled={usersLoadState !== "ready" || authState === "checking"}
-              className="mt-6 w-full rounded-full bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-            >
-              Start a New Attempt
-            </button>
-          </>
-        ) : null}
-      </section>
+                {previewUser ? (
+                  <Card className="mt-4 text-center" padding="md">
+                    <Image
+                      src={previewUser.avatarUrl}
+                      alt={`${previewUser.username} avatar`}
+                      width={96}
+                      height={96}
+                      unoptimized
+                      className="mx-auto h-20 w-20 rounded-full border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950 sm:h-24 sm:w-24"
+                    />
+                    <p className="mt-3 text-base font-bold text-zinc-900 dark:text-zinc-100 sm:text-lg">{previewUser.username}</p>
+                    <PrimaryButton
+                      className="mt-5"
+                      onClick={() => onUserSelect(previewUser.id)}
+                      disabled={usersLoadState !== "ready"}
+                    >
+                      Use this profile
+                    </PrimaryButton>
+                  </Card>
+                ) : (
+                  <Card className="mt-4 border-dashed bg-zinc-100 text-center text-sm text-zinc-600 dark:bg-zinc-950 dark:text-zinc-300" padding="md">
+                    No profiles available.
+                  </Card>
+                )}
+              </Card>
+            ) : (
+              <Card as="section" tone="muted" className="mx-auto w-full max-w-3xl" padding="md">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-bold text-zinc-900 sm:text-xl dark:text-zinc-100">Enter your emoji code</h2>
+                  <Pill tone="emerald">{selectedCount}/3 selected</Pill>
+                </div>
+                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  Signed profile: {selectedUser.username}
+                  {passwordSource !== "unknown" ? ` • Source: ${passwordSource}` : ""}
+                </p>
+
+                <div className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-3 md:gap-4">
+                  {gridTiles.map((tile) => {
+                    const isHidden = selectedSet.has(tile.id);
+                    const isDisabled =
+                      usersLoadState !== "ready" ||
+                      isHidden ||
+                      authState === "success" ||
+                      authState === "checking" ||
+                      authState === "rate-limited";
+
+                    return (
+                      <button
+                        key={tile.id}
+                        type="button"
+                        onClick={() => onTileClick(tile.id)}
+                        disabled={isDisabled}
+                        className={`aspect-square rounded-2xl border border-zinc-200 bg-white text-4xl shadow-[0_8px_0_rgba(228,228,231,1)] transition-all active:shadow-none dark:border-zinc-700 dark:bg-zinc-950 dark:shadow-[0_8px_0_rgba(39,39,42,1)] sm:text-5xl ${
+                          isHidden ? "invisible" : "hover:-translate-y-0.5 active:translate-y-1"
+                        }`}
+                      >
+                        <span aria-hidden="true">{tile.emoji}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+                  <PrimaryButton
+                    onClick={resetAttempt}
+                    disabled={usersLoadState !== "ready" || authState === "checking"}
+                  >
+                    Start a New Attempt
+                  </PrimaryButton>
+                  <button
+                    type="button"
+                    onClick={onChangeProfile}
+                    disabled={authState === "checking"}
+                    className="w-full rounded-full border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    Change Profile
+                  </button>
+                </div>
+              </Card>
+            )}
+          </div>
+        </Card>
+      </div>
     </main>
   );
 }
