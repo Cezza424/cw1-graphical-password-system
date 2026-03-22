@@ -38,7 +38,7 @@ export async function ensureSeedUsers(): Promise<void> {
         avatarUrl: profile.avatarUrl,
         emojiIds: profile.emojiIds,
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
     );
   }
 }
