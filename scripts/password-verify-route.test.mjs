@@ -1,4 +1,6 @@
 const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
+const adminUsername = process.env.ADMIN_USERNAME ?? "teacher1";
+const adminPassword = process.env.ADMIN_PASSWORD ?? "securePassword123";
 
 const ALL_EMOJI_IDS = ["cat", "dog", "rocket", "star", "apple", "car", "ball", "book", "sun"];
 
@@ -18,6 +20,23 @@ function makeMismatchedSelection(correctIds) {
 }
 
 async function run() {
+  const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      username: adminUsername,
+      password: adminPassword,
+    }),
+  });
+  assert(loginResponse.ok, `Admin login failed: ${loginResponse.status}`);
+
+  const setCookie = loginResponse.headers.get("set-cookie");
+  assert(setCookie, "Expected auth cookie from admin login");
+  const cookieHeader = setCookie.split(";")[0];
+
   const usersResponse = await fetch(`${baseUrl}/api/users`, {
     headers: { Accept: "application/json" },
   });
@@ -34,7 +53,7 @@ async function run() {
   const passwordResponse = await fetch(
     `${baseUrl}/api/password?userId=${encodeURIComponent(selectedUser.id)}`,
     {
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", Cookie: cookieHeader },
     },
   );
   assert(passwordResponse.ok, `GET /api/password failed: ${passwordResponse.status}`);

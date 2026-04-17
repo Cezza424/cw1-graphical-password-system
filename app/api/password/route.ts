@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db";
 import {
   DEFAULT_PASSWORD_IDS,
@@ -31,6 +32,11 @@ function fallbackPasswordResponse(userId: string, error?: string): NextResponse<
 export async function GET(
   request: Request,
 ): Promise<NextResponse<PasswordResponse | PasswordErrorResponse>> {
+  const session = await getSession();
+  if (!session?.isAdmin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
 
@@ -80,6 +86,11 @@ type SetPasswordRequest = {
 };
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const session = await getSession();
+  if (!session?.isAdmin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const payload = (await request.json()) as SetPasswordRequest;
 
   if (!payload.userId || !isObjectId(payload.userId)) {

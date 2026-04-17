@@ -73,6 +73,11 @@ export default function HomePage() {
                       Go to Login
                     </PrimaryButton>
                   </Link>
+                  <Link href="/register" className="inline-block w-full">
+                    <button className="w-full rounded-full border border-amber-200 bg-white px-5 py-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 dark:border-amber-900 dark:bg-zinc-950 dark:text-amber-200 dark:hover:bg-zinc-900">
+                      Create a Profile
+                    </button>
+                  </Link>
                 </div>
 
                 {/* Teacher Admin */}

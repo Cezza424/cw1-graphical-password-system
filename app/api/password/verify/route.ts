@@ -7,7 +7,7 @@ import {
 } from "@/lib/emoji-password";
 import User from "@/lib/models/User";
 import { consumeRateLimit } from "@/lib/rate-limit";
-import { ensureSeedUsers, isObjectId } from "@/lib/users";
+import { ensureSeedUsers, isApprovedStatus, isObjectId } from "@/lib/users";
 
 type VerifyPasswordRequest = {
   userId?: string;
@@ -84,6 +84,17 @@ export async function POST(request: Request): Promise<NextResponse<VerifyPasswor
           error: "User not found",
         },
         { status: 404 },
+      );
+    }
+
+    if (!isApprovedStatus(user.status)) {
+      return NextResponse.json(
+        {
+          isMatch: false,
+          source: "database",
+          error: "User is not approved",
+        },
+        { status: 403 },
       );
     }
 

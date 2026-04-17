@@ -48,6 +48,10 @@ async function run() {
       username: { type: String, required: true, unique: true, trim: true },
       avatarUrl: { type: String, required: true },
       emojiIds: { type: [String], required: true },
+      status: { type: String, enum: ["pending", "approved", "rejected"], default: "approved", index: true },
+      reviewedAt: { type: Date, default: null },
+      reviewedBy: { type: mongoose.Schema.Types.ObjectId, default: null },
+      rejectionReason: { type: String, default: null },
     },
     { timestamps: true },
   );
@@ -63,6 +67,10 @@ async function run() {
         username: user.username,
         avatarUrl: user.avatarUrl,
         emojiIds: user.emojiIds,
+        status: "approved",
+        reviewedAt: new Date(),
+        reviewedBy: null,
+        rejectionReason: null,
       },
       { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
     );

@@ -14,6 +14,9 @@ const FALLBACK_USERS: UserProfile[] = [
     id: "fallback-user",
     username: "demo",
     avatarUrl: "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=demo",
+    status: "approved",
+    reviewedAt: null,
+    rejectionReason: null,
   },
 ];
 
@@ -22,7 +25,13 @@ export async function GET(): Promise<NextResponse<UsersResponse>> {
     await connectToDatabase();
     await ensureSeedUsers();
 
-    const users = await User.find({}, { username: 1, avatarUrl: 1 })
+    const users = await User.find(
+      {
+        isAdmin: { $ne: true },
+        $or: [{ status: "approved" }, { status: { $exists: false } }],
+      },
+      { username: 1, avatarUrl: 1, status: 1, reviewedAt: 1, rejectionReason: 1 },
+    )
       .sort({ username: 1 })
       .limit(25)
       .lean();

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type TopAppBarProps = {
-  active: "home" | "login" | "admin" | "dashboard";
+  active: "home" | "login" | "admin" | "dashboard" | "register";
 };
 
 type SessionUser = {
@@ -65,6 +65,16 @@ export function TopAppBar({ active }: TopAppBarProps) {
             }`}
           >
             Login
+          </Link>
+          <Link
+            href="/register"
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition sm:text-sm ${
+              active === "register"
+                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            }`}
+          >
+            Register
           </Link>
           {!loading && (
             <>
